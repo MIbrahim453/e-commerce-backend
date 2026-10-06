@@ -4,6 +4,7 @@ import dotenv from "dotenv"
 import dns from "dns"
 import { connectDB } from "./config/db.connection.js"
 import authRoutes from "./routes/auth.routes.js"
+import productRoutes from "./routes/product.routes.js"
 
 dns.setServers(['1.1.1.1'])
 
@@ -26,5 +27,6 @@ app.get("/health", (req, res) => {
 })
 
 app.use(`${API_PREFIX}/auth`, authRoutes)
+app.use(`${API_PREFIX}/product`, productRoutes)
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
