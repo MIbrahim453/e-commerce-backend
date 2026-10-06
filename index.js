@@ -5,6 +5,7 @@ import dns from "dns"
 import { connectDB } from "./config/db.connection.js"
 import authRoutes from "./routes/auth.routes.js"
 import productRoutes from "./routes/product.routes.js"
+import orderRoutes from "./routes/order.routes.js"
 
 dns.setServers(['1.1.1.1'])
 
@@ -28,5 +29,6 @@ app.get("/health", (req, res) => {
 
 app.use(`${API_PREFIX}/auth`, authRoutes)
 app.use(`${API_PREFIX}/product`, productRoutes)
+app.use(`${API_PREFIX}/order`, orderRoutes)
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
