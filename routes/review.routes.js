@@ -11,10 +11,8 @@ import {
 
 const router = express.Router();
 
-// Public
 router.get("/product/:productId", getProductReviews);
 
-// Protected (Logged-in user)
 router.post("/add/:productId", verifyJWT, authorizedRole("user", "admin"), createReview);
 router.put("/edit/:id", verifyJWT, authorizedRole("user", "admin"), updateReview);
 router.delete("/delete/:id", verifyJWT, authorizedRole("user", "admin"), deleteReview);

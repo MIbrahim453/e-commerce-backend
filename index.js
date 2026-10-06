@@ -1,36 +1,38 @@
-import express from "express"
-import cors from "cors"
-import dotenv from "dotenv"
-import dns from "dns"
-import { connectDB } from "./config/db.connection.js"
-import authRoutes from "./routes/auth.routes.js"
-import productRoutes from "./routes/product.routes.js"
-import orderRoutes from "./routes/order.routes.js"
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import dns from "dns";
+import { connectDB } from "./config/db.connection.js";
+import authRoutes from "./routes/auth.routes.js";
+import productRoutes from "./routes/product.routes.js";
+import orderRoutes from "./routes/order.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
+import revenueRoutes from "./routes/revenue.routes.js";
 
-dns.setServers(['1.1.1.1'])
+dns.setServers(["1.1.1.1"]);
 
-dotenv.config()
+dotenv.config();
 
-connectDB()
+connectDB();
 
-const app = express()
+const app = express();
 
-const PORT = process.env.PORT || 3000
-const API_PREFIX = "/api/v1"
+const PORT = process.env.PORT || 3000;
+const API_PREFIX = "/api/v1";
 
-app.use(cors())
-app.use(express.json())
-app.use(express.urlencoded({extended: true}))
-app.use(express.static('public'))
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static("public"));
 
 app.get("/health", (req, res) => {
-    res.json({message: "Server health is good"})
-})
+  res.json({ message: "Server health is good" });
+});
 
-app.use(`${API_PREFIX}/auth`, authRoutes)
-app.use(`${API_PREFIX}/product`, productRoutes)
-app.use(`${API_PREFIX}/order`, orderRoutes)
+app.use(`${API_PREFIX}/auth`, authRoutes);
+app.use(`${API_PREFIX}/product`, productRoutes);
+app.use(`${API_PREFIX}/order`, orderRoutes);
 app.use(`${API_PREFIX}/review`, reviewRoutes);
+app.use(`${API_PREFIX}/revenue`, revenueRoutes);
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

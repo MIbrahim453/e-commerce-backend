@@ -1,14 +1,12 @@
 import Review from "../models/review.model.js";
 import Product from "../models/product.model.js";
 
-// 1. CREATE / ADD REVIEW
 const createReview = async (req, res) => {
   try {
     const { productId } = req.params;
     const { rating, review } = req.body;
     const userId = req.user.id;
 
-    // Validate rating range
     if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({
         success: false,
@@ -23,7 +21,6 @@ const createReview = async (req, res) => {
       });
     }
 
-    // Verify product exists
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({
@@ -32,16 +29,15 @@ const createReview = async (req, res) => {
       });
     }
 
-    // Prevent duplicate reviews from the same user on the same product
     const existingReview = await Review.findOne({ productId, userId });
     if (existingReview) {
       return res.status(400).json({
         success: false,
-        message: "You have already reviewed this product. You can update your existing review.",
+        message:
+          "You have already reviewed this product. You can update your existing review.",
       });
     }
 
-    // Create review
     const newReview = await Review.create({
       rating,
       review,
@@ -77,7 +73,7 @@ const getProductReviews = async (req, res) => {
         ? Number(
             (
               reviews.reduce((acc, curr) => acc + curr.rating, 0) / totalReviews
-            ).toFixed(1)
+            ).toFixed(1),
           )
         : 0;
 
@@ -99,7 +95,6 @@ const getProductReviews = async (req, res) => {
   }
 };
 
-// 3. UPDATE REVIEW (Only author can edit)
 const updateReview = async (req, res) => {
   try {
     const { id } = req.params;
@@ -144,7 +139,6 @@ const updateReview = async (req, res) => {
   }
 };
 
-// 4. DELETE REVIEW (Author or Admin)
 const deleteReview = async (req, res) => {
   try {
     const { id } = req.params;
@@ -182,7 +176,6 @@ const deleteReview = async (req, res) => {
   }
 };
 
-// 5. GET LOGGED-IN USER'S REVIEWS
 const getUserReviews = async (req, res) => {
   try {
     const userId = req.user.id;
