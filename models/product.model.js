@@ -90,7 +90,7 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.virtual("availableSizes").get(function () {
-  if (!this.details.sizes) return [];
+  if (!this.details?.sizes) return [];
   const sizes = this.details.sizes.filter((s) => s.stock > 0);
   return sizes.map((s) => s.size);
 });

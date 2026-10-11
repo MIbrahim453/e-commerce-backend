@@ -13,7 +13,7 @@ const revenueStats = async (req, res) => {
       ]),
       Order.countDocuments({
         orderStatus: "PENDING",
-        paymentStatus: "PENDING",
+        paymentStatus: "UNPAID",
       }),
       Order.countDocuments({
         orderStatus: "DELIVERED",

@@ -286,7 +286,7 @@ const markNewProduct = async (req, res) => {
 };
 const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find().populate("category");
+    const products = await Product.find({ "details.sizes.stock": { $gt: 0 }, }).populate("category");
 
     return res.status(200).json({
       success: true,

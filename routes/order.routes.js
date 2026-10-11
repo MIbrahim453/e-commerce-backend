@@ -9,6 +9,7 @@ import {
   getAllOrders,
   getSingleOrder,
   getUserOrders,
+  orderStats,
 } from "../controllers/order.controller.js";
 
 const router = express.Router();
@@ -18,7 +19,7 @@ router.put("/edit-order/:id", verifyJWT, authorizedRole("admin"), editOrder);
 router.delete(
   "/cancel-order/:id",
   verifyJWT,
-  authorizedRole("user","admin"),
+  authorizedRole("user", "admin"),
   cancelOrder,
 );
 router.patch(
@@ -30,5 +31,5 @@ router.patch(
 router.get("/all-orders", verifyJWT, authorizedRole("admin"), getAllOrders);
 router.get("/user-orders", verifyJWT, authorizedRole("user", "admin"), getUserOrders);
 router.get("/single-order/:id", verifyJWT, authorizedRole("user", "admin"), getSingleOrder);
-
+router.get("/order-stats", verifyJWT, authorizedRole("admin"), orderStats);
 export default router;

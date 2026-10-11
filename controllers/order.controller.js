@@ -14,7 +14,7 @@ const createOrder = async (req, res) => {
       state,
       zipCode,
       country,
-    } = shippingAddress;
+    } = shippingAddress || {};
 
     const user = req.user.id;
 
@@ -108,7 +108,7 @@ const editOrder = async (req, res) => {
       state,
       zipCode,
       country,
-    } = shippingAddress;
+    } = shippingAddress || {};
 
     const order = await Order.findOneAndUpdate(
       {
@@ -142,6 +142,9 @@ const editOrder = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Order updated successfully",
+      data: {
+        order,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -156,6 +159,7 @@ const cancelOrder = async (req, res) => {
   try {
     const id = req.params.id;
     const user = req.user.id;
+    const role = req.user.role;
     const order = await Order.findById(id);
     if (!order) {
       return res.status(400).json({
@@ -314,13 +318,16 @@ const getSingleOrder = async (req, res) => {
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Order fetched successfully",
+        message: "Order Not Found",
       });
     }
 
     return res.status(200).json({
       success: true,
       message: "Order fetched successfully",
+      data: {
+        order
+      }
     });
   } catch (error) {
     console.error(error);
