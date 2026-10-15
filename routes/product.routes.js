@@ -1,8 +1,11 @@
 import express from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import authorizedRole from "../middlewares/rbac.middleware.js";
+import { upload } from "../middlewares/multer.middleware.js";
 import {
   createCategory,
+  editCategory,
+  deleteCategory,
   createProduct,
   deleteProduct,
   editProduct,
@@ -24,6 +27,7 @@ router.post(
   "/create-product",
   verifyJWT,
   authorizedRole("admin"),
+  upload.fields([{ name: "images", maxCount: 10 }]),
   createProduct,
 );
 router.post(
@@ -33,9 +37,22 @@ router.post(
   createCategory,
 );
 router.put(
+  "/edit-category/:id",
+  verifyJWT,
+  authorizedRole("admin"),
+  editCategory,
+);
+router.delete(
+  "/delete-category/:id",
+  verifyJWT,
+  authorizedRole("admin"),
+  deleteCategory,
+);
+router.put(
   "/edit-product/:id",
   verifyJWT,
   authorizedRole("admin"),
+  upload.fields([{ name: "images", maxCount: 10 }]),
   editProduct,
 );
 router.delete(
