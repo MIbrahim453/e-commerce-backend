@@ -8,6 +8,7 @@ import productRoutes from "./routes/product.routes.js";
 import orderRoutes from "./routes/order.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import revenueRoutes from "./routes/revenue.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 dns.setServers(["1.1.1.1"]);
 
@@ -34,5 +35,6 @@ app.use(`${API_PREFIX}/product`, productRoutes);
 app.use(`${API_PREFIX}/order`, orderRoutes);
 app.use(`${API_PREFIX}/review`, reviewRoutes);
 app.use(`${API_PREFIX}/revenue`, revenueRoutes);
+app.use(`${API_PREFIX}/user`, userRoutes);
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

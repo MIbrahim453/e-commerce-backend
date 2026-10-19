@@ -156,19 +156,26 @@ const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
-    if (!refreshToken || refreshToken.type !== "refresh")
+    if (!refreshToken)
       return res.status(400).json({
         success: false,
         message: "Refresh token is required",
       });
 
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    if (!decoded || decoded.type !== "refresh") {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token",
+      });
+    }
     const user = await User.findById(decoded.id);
-    if (!user)
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
+    }
 
     const token = generateToken(user);
 
@@ -241,7 +248,6 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-
 const changePassword = async (req, res) => {
   try {
     const { password } = req.body;
@@ -285,9 +291,59 @@ const changePassword = async (req, res) => {
     });
   }
 };
+
+const googleAuth = async (req, res) => {
+  try {
+    const { firstName, lastName, email, profilePhoto, uid } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      const hashPassword = await bcrypt.hash(uid || email, 10);
+      user = await User.create({
+        firstName: firstName || "User",
+        lastName: lastName || firstName || "User",
+        email,
+        profilePhoto: profilePhoto || null,
+        password: hashPassword,
+        googleId: uid || null,
+      });
+    }
+
+    const token = generateToken(user);
+    const userWithoutPassword = await User.findById(user._id).select(
+      "-password",
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "User logged in successfully",
+      data: {
+        user: userWithoutPassword,
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
 export {
   register,
   login,
+  googleAuth,
   logout,
   refreshToken,
   forgotPassword,
