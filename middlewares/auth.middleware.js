@@ -3,7 +3,8 @@ import User from "../models/user.model.js";
 
 const verifyJWT = async (req, res, next) => {
   try {
-    const token = req.header("Authorization").replace("Bearer ", "");
+    const authHeader = req.header("Authorization");
+    const token = authHeader?.replace("Bearer ", "");
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -22,7 +23,19 @@ const verifyJWT = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.log(error);
+    console.log("verifyJWT error:", error.name, error.message);
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        success: false,
+        message: "Token expired",
+      });
+    }
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid token",
+      });
+    }
     return res.status(500).json({
       success: false,
       message: "Internal server error",

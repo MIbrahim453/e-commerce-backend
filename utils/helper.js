@@ -36,7 +36,6 @@ const batchDeduction = async (items) => {
 
 const batchRestock = async (items) => {
   try {
-    const restock = [];
     for (const item of items) {
       const productRestock = await Product.findOneAndUpdate(
         {
@@ -57,7 +56,7 @@ const batchRestock = async (items) => {
         },
       );
     }
-    return true
+    return true;
   } catch (error) {
     throw new Error(error.message);
   }
