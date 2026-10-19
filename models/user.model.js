@@ -17,8 +17,9 @@ const userSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      required: true,
+      required: false,
       unique: true,
+      sparse: true,
     },
     password: {
       type: String,
@@ -43,6 +44,10 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       required: true,
       default: "user",
+    },
+    googleId: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true },

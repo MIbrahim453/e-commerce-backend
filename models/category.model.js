@@ -17,10 +17,10 @@ const categorySchema = new mongoose.Schema(
       trim: true,
     },
     categoryCollection: {
-    type: String,
-    required: true,
-    enum: ["men", "women", "kids"],
-  },
+      type: String,
+      required: true,
+      enum: ["men", "women", "kids"],
+    },
   },
   { timestamps: true },
 );

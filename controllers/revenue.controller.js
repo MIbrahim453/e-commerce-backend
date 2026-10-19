@@ -42,23 +42,17 @@ const revenueStats = async (req, res) => {
 
 const getAllPayments = async (req, res) => {
   try {
-    const payments = await Order.find();
+    const payments = await Order.find()
+      .populate("user", "firstName lastName email")
+      .sort({ createdAt: -1 });
 
-    if (!payments) {
-      return res.status(400).json({
-        success: false,
-        message: "No Payments are available",
-      });
-    }
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "All Payments Fetched Successfully",
-        data: {
-          payments,
-        }
-      })
+    return res.status(200).json({
+      success: true,
+      message: "All Payments Fetched Successfully",
+      data: {
+        payments: payments || [],
+      },
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -71,19 +65,13 @@ const getAllPayments = async (req, res) => {
 const getUserPayments = async (req, res) => {
   try {
     const user = req.user.id;
-    const payments = await Order.find({ user });
-
-    if (!payments) {
-      return res.status(400).json({
-        success: false,
-        message: "No Payments are available",
-      });
-    }
+    const payments = await Order.find({ user }).sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
+      message: "User payments fetched successfully",
       data: {
-        payments,
+        payments: payments || [],
       },
     });
   } catch (error) {

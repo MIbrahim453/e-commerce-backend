@@ -1,6 +1,49 @@
 import Category from "../models/category.model.js";
 import Product from "../models/product.model.js";
+import Review from "../models/review.model.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
+
+const attachReviewStats = async (products) => {
+  if (!products) return products;
+  const isArray = Array.isArray(products);
+  const prodList = isArray ? products : [products];
+  if (prodList.length === 0) return products;
+
+  try {
+    const prodIds = prodList.map((p) => p._id);
+    const reviewStats = await Review.aggregate([
+      { $match: { productId: { $in: prodIds } } },
+      {
+        $group: {
+          _id: "$productId",
+          averageRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const statsMap = new Map();
+    reviewStats.forEach((stat) => {
+      statsMap.set(stat._id.toString(), {
+        averageRating: Number(stat.averageRating.toFixed(1)),
+        totalReviews: stat.totalReviews,
+      });
+    });
+
+    const enriched = prodList.map((prod) => {
+      const plain = prod.toObject ? prod.toObject() : { ...prod };
+      const stat = statsMap.get(prod._id.toString());
+      plain.averageRating = stat ? stat.averageRating : 0;
+      plain.totalReviews = stat ? stat.totalReviews : 0;
+      return plain;
+    });
+
+    return isArray ? enriched : enriched[0];
+  } catch (err) {
+    console.error("Error attaching review stats:", err);
+    return products;
+  }
+};
 
 const createProduct = async (req, res) => {
   try {
@@ -29,11 +72,18 @@ const createProduct = async (req, res) => {
 
     const { material, color, sizes, instructions } = parsedDetails || {};
 
+    if (!category) {
+      return res.status(400).json({
+        success: false,
+        message: "Product category is required. Please create or select a category.",
+      });
+    }
+
     const categoryExists = await Category.findById(category);
     if (!categoryExists) {
       return res.status(400).json({
         success: false,
-        message: "Category does not exist",
+        message: "Selected category does not exist",
       });
     }
 
@@ -48,13 +98,13 @@ const createProduct = async (req, res) => {
     const imageFiles = req.files?.images || [];
     const localImagePaths = imageFiles.map((file) => file.path);
 
-    const uploadPromises = localImagePaths.map(async (filePath) =>
-      await uploadOnCloudinary(filePath)
+    const uploadPromises = localImagePaths.map(
+      async (filePath) => await uploadOnCloudinary(filePath),
     );
     const uploadResponses = await Promise.all(uploadPromises);
 
     const imageUrls = uploadResponses
-      .filter((result) => result && (result.url))
+      .filter((result) => result && result.url)
       .map((result) => result.url);
 
     let thumbnailUrl = "";
@@ -113,7 +163,8 @@ const createProduct = async (req, res) => {
       });
       return res.status(502).json({
         success: false,
-        message: "Cloudinary rejected the image upload. Verify the API credentials and upload permissions.",
+        message:
+          "Cloudinary rejected the image upload. Verify the API credentials and upload permissions.",
         providerStatus: error.http_code,
       });
     }
@@ -130,7 +181,10 @@ const createCategory = async (req, res) => {
   try {
     const { name, categoryCollection } = req.body;
 
-    const existingCategory = await Category.findOne({ name });
+    const existingCategory = await Category.findOne({
+      name,
+      categoryCollection,
+    });
     if (existingCategory) {
       return res.status(400).json({
         success: false,
@@ -164,101 +218,17 @@ const createCategory = async (req, res) => {
   }
 };
 
-const editCategory = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, categoryCollection } = req.body;
-
-    const findCategory = await Category.findById(id);
-    if (!findCategory) {
-      return res.status(404).json({
-        success: false,
-        message: "Category not found",
-      });
-    }
-
-    if (name) {
-      const cleanName = name.trim().toLowerCase();
-      const existing = await Category.findOne({ name: cleanName, _id: { $ne: id } });
-      if (existing) {
-        return res.status(400).json({
-          success: false,
-          message: "A category with this name already exists",
-        });
-      }
-      findCategory.name = cleanName;
-      findCategory.slug = cleanName
-        .replace(/[^a-zA-Z0-9]/g, " ")
-        .trim()
-        .split(" ")
-        .join("-");
-    }
-
-    if (categoryCollection) {
-      if (!["men", "women", "kids"].includes(categoryCollection)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid collection. Must be men, women, or kids",
-        });
-      }
-      findCategory.categoryCollection = categoryCollection;
-    }
-
-    await findCategory.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Category updated successfully",
-      data: {
-        category: findCategory,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-const deleteCategory = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const category = await Category.findById(id);
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: "Category not found",
-      });
-    }
-
-    const linkedProducts = await Product.countDocuments({ category: id });
-    if (linkedProducts > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot delete: ${linkedProducts} product(s) are linked to this category`,
-      });
-    }
-
-    await Category.findByIdAndDelete(id);
-
-    return res.status(200).json({
-      success: true,
-      message: "Category deleted successfully",
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
 const editProduct = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const findProduct = await Product.findById(id);
+    if (!findProduct) {
+      return res.status(400).json({
+        success: false,
+        message: "Product does not exist",
+      });
+    }
 
     const {
       name,
@@ -272,6 +242,7 @@ const editProduct = async (req, res) => {
       category,
       details,
     } = req.body;
+
     let parsedDetails = details;
     if (typeof details === "string") {
       try {
@@ -280,16 +251,11 @@ const editProduct = async (req, res) => {
         parsedDetails = {};
       }
     }
-    const { material, color, sizes, instructions } = parsedDetails || findProduct.details || {};
+    const { material, color, sizes, instructions } =
+      parsedDetails || findProduct.details || {};
 
-    const findProduct = await Product.findById(id);
-    if (!findProduct) {
-      return res.status(400).json({
-        success: false,
-        message: "Product does not exist",
-      });
-    }
-    const findCategory = await Category.findById(category);
+    const categoryId = category || findProduct.category;
+    const findCategory = await Category.findById(categoryId);
     if (!findCategory) {
       return res.status(400).json({
         success: false,
@@ -297,7 +263,40 @@ const editProduct = async (req, res) => {
       });
     }
 
-    const slug = name
+    let updatedImages = [];
+    if (images) {
+      if (Array.isArray(images)) {
+        updatedImages = images;
+      } else if (typeof images === "string") {
+        try {
+          const parsed = JSON.parse(images);
+          updatedImages = Array.isArray(parsed) ? parsed : [images];
+        } catch (e) {
+          updatedImages = [images];
+        }
+      }
+    } else {
+      updatedImages = findProduct.images || [];
+    }
+
+    const imageFiles = req.files?.images || [];
+    if (imageFiles.length > 0) {
+      const localImagePaths = imageFiles.map((file) => file.path);
+      const uploadPromises = localImagePaths.map(
+        async (filePath) => await uploadOnCloudinary(filePath),
+      );
+      const uploadResponses = await Promise.all(uploadPromises);
+      const newUrls = uploadResponses
+        .filter((result) => result && result.url)
+        .map((result) => result.url);
+      updatedImages = [...updatedImages, ...newUrls];
+    }
+
+    const updatedThumbnail =
+      thumbnail || updatedImages[0] || findProduct.thumbnail;
+
+    const productName = name || findProduct.name;
+    const slug = productName
       .replace(/[^a-zA-Z0-9]/g, " ")
       .trim()
       .split(/\s+/)
@@ -307,21 +306,28 @@ const editProduct = async (req, res) => {
     const updateProduct = await Product.findByIdAndUpdate(
       id,
       {
-        name,
-        description,
-        isTrending,
-        isNewArrival,
-        price,
-        discount,
-        images,
-        thumbnail,
+        name: productName,
+        description: description ?? findProduct.description,
+        isTrending:
+          isTrending !== undefined
+            ? Boolean(isTrending)
+            : findProduct.isTrending,
+        isNewArrival:
+          isNewArrival !== undefined
+            ? Boolean(isNewArrival)
+            : findProduct.isNewArrival,
+        price: price !== undefined ? Number(price) : findProduct.price,
+        discount:
+          discount !== undefined ? Number(discount) : findProduct.discount,
+        images: updatedImages,
+        thumbnail: updatedThumbnail,
         category: findCategory._id,
         slug,
         details: {
-          material,
-          color,
-          sizes,
-          instructions,
+          material: material ?? findProduct.details?.material,
+          color: color ?? findProduct.details?.color,
+          sizes: sizes ?? findProduct.details?.sizes,
+          instructions: instructions ?? findProduct.details?.instructions,
         },
       },
       {
@@ -377,10 +383,10 @@ const deleteProduct = async (req, res) => {
 const markTrendingProduct = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const markTrending = await Product.findOneAndUpdate(
+    const { status } = req.body;
+    const markTrending = await Product.findByIdAndUpdate(
       { _id: id },
-      { isTrending: true },
+      { isTrending: status },
       { new: true },
     );
     if (!markTrending) {
@@ -406,13 +412,13 @@ const markTrendingProduct = async (req, res) => {
 const markNewProduct = async (req, res) => {
   try {
     const { id } = req.params;
-
+    const { status } = req.body;
     const markNew = await Product.findOneAndUpdate(
       {
         _id: id,
       },
       {
-        isNewArrival: true,
+        isNewArrival: status,
       },
       {
         new: true,
@@ -439,7 +445,11 @@ const markNewProduct = async (req, res) => {
 };
 const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find({ "details.sizes.stock": { $gt: 0 }, }).populate("category");
+    const rawProducts = await Product.find()
+      .populate("category")
+      .sort({ createdAt: -1 });
+
+    const products = await attachReviewStats(rawProducts);
 
     return res.status(200).json({
       success: true,
@@ -459,7 +469,7 @@ const getAllProducts = async (req, res) => {
 
 const getCategory = async (req, res) => {
   try {
-    const categories = await Category.find().sort({ createdAt: -1 });
+    const categories = await Category.find();
 
     return res.status(200).json({
       success: true,
@@ -480,16 +490,21 @@ const getCategory = async (req, res) => {
 const getProductsByCollection = async (req, res) => {
   try {
     const { collection } = req.params;
+    const normalizedCollection = collection ? collection.toLowerCase() : "";
     const categories = await Category.find({
-      categoryCollection: collection,
+      categoryCollection: normalizedCollection,
     }).select("_id");
 
     const categoryIds = categories.map((category) => category._id);
 
-    const products = await Product.find({
+    const rawProducts = await Product.find({
       category: { $in: categoryIds },
-      "details.sizes.stock": { $gt: 0 },
-    }).populate("category");
+    })
+      .populate("category")
+      .sort({ createdAt: -1 });
+
+    const products = await attachReviewStats(rawProducts);
+
     return res.status(200).json({
       success: true,
       message: "Products fetched successfully",
@@ -505,14 +520,17 @@ const getProductsByCollection = async (req, res) => {
     });
   }
 };
+
 const getProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
 
-    const products = await Product.find({
+    const rawProducts = await Product.find({
       category: categoryId,
       "details.sizes.stock": { $gt: 0 },
     }).populate("category");
+
+    const products = await attachReviewStats(rawProducts);
 
     return res.status(200).json({
       success: true,
@@ -534,7 +552,19 @@ const getSingleProduct = async (req, res) => {
   try {
     const { slug } = req.params;
 
-    const product = await Product.findOne({ slug }).populate("category");
+    let rawProduct = await Product.findOne({ slug }).populate("category");
+    if (!rawProduct && mongoose.Types.ObjectId.isValid(slug)) {
+      rawProduct = await Product.findById(slug).populate("category");
+    }
+
+    if (!rawProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const product = await attachReviewStats(rawProduct);
 
     return res.status(200).json({
       success: true,
@@ -544,7 +574,7 @@ const getSingleProduct = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Error in getSingleProduct:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -554,17 +584,20 @@ const getSingleProduct = async (req, res) => {
 
 const getTrendingProducts = async (req, res) => {
   try {
-    const products = await Product.find({
+    const rawProducts = await Product.find({
       isTrending: true,
       "details.sizes.stock": { $gt: 0 },
     }).populate("category");
 
-    if (!products) {
+    if (!rawProducts) {
       return res.status(400).json({
         success: false,
         message: "No trending product found",
       });
     }
+
+    const products = await attachReviewStats(rawProducts);
+
     return res.status(200).json({
       success: true,
       message: "Trending products fetched successfully",
@@ -583,17 +616,19 @@ const getTrendingProducts = async (req, res) => {
 
 const getNewProducts = async (req, res) => {
   try {
-    const products = await Product.find({
+    const rawProducts = await Product.find({
       isNewArrival: true,
       "details.sizes.stock": { $gt: 0 },
     }).populate("category");
 
-    if (!products) {
+    if (!rawProducts) {
       return res.status(400).json({
         success: false,
         message: "No new arrival product found",
       });
     }
+
+    const products = await attachReviewStats(rawProducts);
 
     return res.status(200).json({
       success: true,
@@ -607,6 +642,53 @@ const getNewProducts = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error",
+    });
+  }
+};
+
+const updateProductDiscount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { discount } = req.body;
+
+    const discountNumber = Number(discount);
+    if (isNaN(discountNumber) || discountNumber < 0 || discountNumber > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Discount must be a valid number between 0 and 100",
+      });
+    }
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      { discount: discountNumber },
+      { new: true },
+    ).populate("category");
+
+    if (!updatedProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const enrichedProduct = await attachReviewStats(updatedProduct);
+
+    return res.status(200).json({
+      success: true,
+      message:
+        discountNumber > 0
+          ? `${discountNumber}% discount applied successfully`
+          : "Discount removed successfully",
+      data: {
+        product: enrichedProduct,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating product discount:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
     });
   }
 };
@@ -645,15 +727,15 @@ const productDashboard = async (req, res) => {
     });
   }
 };
+
 export {
   createProduct,
   createCategory,
-  editCategory,
-  deleteCategory,
   editProduct,
   deleteProduct,
   markTrendingProduct,
   markNewProduct,
+  updateProductDiscount,
   getAllProducts,
   getCategory,
   getProductsByCategory,

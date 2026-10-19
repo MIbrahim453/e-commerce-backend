@@ -13,9 +13,28 @@ const router = express.Router();
 
 router.get("/product/:productId", getProductReviews);
 
-router.post("/add/:productId", verifyJWT, authorizedRole("user", "admin"), createReview);
-router.put("/edit/:id", verifyJWT, authorizedRole("user", "admin"), updateReview);
-router.delete("/delete/:id", verifyJWT, authorizedRole("user", "admin"), deleteReview);
-router.get("/my-reviews", verifyJWT, authorizedRole("user", "admin"), getUserReviews);
-
+router.post(
+  "/add/:productId",
+  verifyJWT,
+  authorizedRole("user", "admin"),
+  createReview,
+);
+router.put(
+  "/edit/:id",
+  verifyJWT,
+  authorizedRole("user", "admin"),
+  updateReview,
+);
+router.delete(
+  "/delete/:id",
+  verifyJWT,
+  authorizedRole("user", "admin"),
+  deleteReview,
+);
+router.get(
+  "/my-reviews",
+  verifyJWT,
+  authorizedRole("user", "admin"),
+  getUserReviews,
+);
 export default router;

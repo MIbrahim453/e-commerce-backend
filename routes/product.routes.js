@@ -4,8 +4,6 @@ import authorizedRole from "../middlewares/rbac.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import {
   createCategory,
-  editCategory,
-  deleteCategory,
   createProduct,
   deleteProduct,
   editProduct,
@@ -18,10 +16,18 @@ import {
   getTrendingProducts,
   markNewProduct,
   markTrendingProduct,
+  updateProductDiscount,
   productDashboard,
 } from "../controllers/product.controller.js";
 
 const router = express.Router();
+
+router.put(
+  "/update-discount/:id",
+  verifyJWT,
+  authorizedRole("admin"),
+  updateProductDiscount,
+);
 
 router.post(
   "/create-product",
@@ -35,18 +41,6 @@ router.post(
   verifyJWT,
   authorizedRole("admin"),
   createCategory,
-);
-router.put(
-  "/edit-category/:id",
-  verifyJWT,
-  authorizedRole("admin"),
-  editCategory,
-);
-router.delete(
-  "/delete-category/:id",
-  verifyJWT,
-  authorizedRole("admin"),
-  deleteCategory,
 );
 router.put(
   "/edit-product/:id",
@@ -75,6 +69,11 @@ router.get("/get-products-by-collection/:collection", getProductsByCollection);
 router.get("/get-single-product/:slug", getSingleProduct);
 router.get("/get-trending-products", getTrendingProducts);
 router.get("/get-new-products", getNewProducts);
-router.get("/product-stats", verifyJWT, authorizedRole("admin"), productDashboard)
+router.get(
+  "/product-stats",
+  verifyJWT,
+  authorizedRole("admin"),
+  productDashboard,
+);
 
 export default router;

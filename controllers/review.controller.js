@@ -153,7 +153,6 @@ const deleteReview = async (req, res) => {
       });
     }
 
-    // Only allow deletion if user owns it OR is an admin
     if (review.userId.toString() !== userId && userRole !== "admin") {
       return res.status(403).json({
         success: false,
