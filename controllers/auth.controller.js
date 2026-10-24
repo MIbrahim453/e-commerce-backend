@@ -46,7 +46,7 @@ const register = async (req, res) => {
     if (requiredFields.some((field) => !field || !field.trim())) {
       return res.status(400).json({
         success: false,
-        message: ` All fields are required`,
+        message: "All fields are required",
       });
     }
 
