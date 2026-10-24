@@ -1,5 +1,6 @@
 import Category from "../models/category.model.js";
 import Product from "../models/product.model.js";
+import Order from "../models/order.model.js";
 import Review from "../models/review.model.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
 
@@ -214,6 +215,129 @@ const createCategory = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Internal server error",
+    });
+  }
+};
+
+const deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    // Find products related to this category
+    const products = await Product.find({ category: id });
+    const productIds = products.map((product) => product._id);
+    
+    await Order.updateMany(
+      {
+        $or: [
+          { "items.productId": { $in: productIds } },
+          { "items.category": category.name },
+        ],
+      },
+      {
+        $set: { orderStatus: "CANCELLED" },
+      },
+    );
+    
+    // Delete products related to this category
+    await Product.deleteMany({ category: id });
+
+    // Mark orders related to this category or its products as CANCELLED
+
+    // Delete the category
+    await Category.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Category and related products deleted, related orders cancelled",
+      data: {
+        category,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+const editCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, categoryCollection } = req.body;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid category ID",
+      });
+    }
+
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    if (name) {
+      const targetCollection =
+        categoryCollection || category.categoryCollection;
+      const existing = await Category.findOne({
+        _id: { $ne: id },
+        name: name.trim().toLowerCase(),
+        categoryCollection: targetCollection,
+      });
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: "Category with this name and collection already exists",
+        });
+      }
+      category.name = name.trim().toLowerCase();
+      category.slug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, " ")
+        .trim()
+        .split(/\s+/)
+        .join("-");
+    }
+
+    if (categoryCollection) {
+      if (!["men", "women", "kids"].includes(categoryCollection)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid collection. Allowed values: men, women, kids",
+        });
+      }
+      category.categoryCollection = categoryCollection;
+    }
+
+    await category.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Category updated successfully",
+      data: {
+        category,
+      },
+    });
+  } catch (error) {
+    console.error("Error in editCategory:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
     });
   }
 };
@@ -731,6 +855,8 @@ const productDashboard = async (req, res) => {
 export {
   createProduct,
   createCategory,
+  editCategory,
+  deleteCategory,
   editProduct,
   deleteProduct,
   markTrendingProduct,

@@ -9,6 +9,7 @@ import orderRoutes from "./routes/order.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import revenueRoutes from "./routes/revenue.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import categoryRoutes from "./routes/category.routes.js";
 
 dns.setServers(["1.1.1.1"]);
 
@@ -32,6 +33,8 @@ app.get("/health", (req, res) => {
 
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/product`, productRoutes);
+app.use(`${API_PREFIX}/category`, categoryRoutes);
+app.use(`${API_PREFIX}/categories`, categoryRoutes);
 app.use(`${API_PREFIX}/order`, orderRoutes);
 app.use(`${API_PREFIX}/review`, reviewRoutes);
 app.use(`${API_PREFIX}/revenue`, revenueRoutes);

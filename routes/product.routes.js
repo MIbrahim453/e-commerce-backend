@@ -4,6 +4,8 @@ import authorizedRole from "../middlewares/rbac.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import {
   createCategory,
+  editCategory,
+  deleteCategory,
   createProduct,
   deleteProduct,
   editProduct,
@@ -41,6 +43,24 @@ router.post(
   verifyJWT,
   authorizedRole("admin"),
   createCategory,
+);
+router.put(
+  "/edit-category/:id",
+  verifyJWT,
+  authorizedRole("admin"),
+  editCategory,
+);
+router.delete(
+  "/delete-category/:id",
+  verifyJWT,
+  authorizedRole("admin"),
+  deleteCategory,
+);
+router.delete(
+  "/category/:id",
+  verifyJWT,
+  authorizedRole("admin"),
+  deleteCategory,
 );
 router.put(
   "/edit-product/:id",
