@@ -12,6 +12,7 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
+    "@google/genai": "^2.31.0",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.11.0",
     "cors": "^2.8.6",
