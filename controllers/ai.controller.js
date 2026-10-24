@@ -389,7 +389,7 @@ export const askStoreAnalytics = async (req, res) => {
 
     const avgRating = reviews.length > 0
       ? (reviews.reduce((s, r) => s + (Number(r.rating) || 0), 0) / reviews.length).toFixed(1)
-      : "5.0";
+      : "0.0";
 
     const storeSnapshot = {
       totalProductsCount: totalProducts.length,
